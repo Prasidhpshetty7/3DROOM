@@ -77,9 +77,8 @@ if(ambientAudio) {
 function showStartButton() {
     if(loadingStatus) loadingStatus.textContent = "System ready. Welcome to THE ROOM."
     if(loadingStartBtn) {
-        setTimeout(() => {
-            loadingStartBtn.classList.add('visible')
-        }, 300)
+        // Show START button immediately when progress reaches 100%
+        loadingStartBtn.classList.add('visible')
         loadingStartBtn.addEventListener('click', () => {
             // Play audio IMMEDIATELY - before anything else
             if(ambientAudio && !audioContext) {
