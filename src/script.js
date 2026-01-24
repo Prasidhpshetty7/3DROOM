@@ -173,18 +173,22 @@ let startTime = Date.now()
 const checkAssetsLoaded = setInterval(() => {
     const elapsed = Date.now() - startTime
     
-    // Check if all resources are loaded
-    if (window.experience && window.experience.resources && window.experience.resources.items) {
+    // Check if all resources are loaded (progress = 100%)
+    if (window.experience && window.experience.resources) {
         const resources = window.experience.resources
-        // Check if the main models are loaded
-        if (resources.items.roomModel && resources.items.pcScreenModel && resources.items.macScreenModel) {
-            assetsLoaded = true
-            clearInterval(checkAssetsLoaded)
-            // Force progress to 100% and show start button
-            progress = 100
-            clearInterval(progressInterval)
-            clearInterval(fileInterval)
-            showStartButton()
+        if (resources.loaded !== undefined && resources.toLoad !== undefined) {
+            if (resources.loaded >= resources.toLoad) {
+                // All assets loaded!
+                assetsLoaded = true
+                clearInterval(checkAssetsLoaded)
+                clearInterval(progressInterval)
+                clearInterval(fileInterval)
+                progress = 100
+                if(loadingBar) loadingBar.style.width = '100%'
+                if(loadingShine) loadingShine.style.left = '70%'
+                if(loadingPercent) loadingPercent.textContent = '100%'
+                showStartButton()
+            }
         }
     }
     
@@ -192,9 +196,12 @@ const checkAssetsLoaded = setInterval(() => {
     if (elapsed >= maxWaitTime && !assetsLoaded) {
         assetsLoaded = true
         clearInterval(checkAssetsLoaded)
-        progress = 100
         clearInterval(progressInterval)
         clearInterval(fileInterval)
+        progress = 100
+        if(loadingBar) loadingBar.style.width = '100%'
+        if(loadingShine) loadingShine.style.left = '70%'
+        if(loadingPercent) loadingPercent.textContent = '100%'
         showStartButton()
     }
 }, 100) // Check every 100ms
