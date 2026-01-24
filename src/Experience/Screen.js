@@ -1,0 +1,148 @@
+import * as THREE from 'three'
+
+import Experience from './Experience.js'
+
+export default class Screen
+{
+    constructor(_mesh, _sourcePath)
+    {
+        this.experience = new Experience()
+        this.resources = this.experience.resources
+        this.debug = this.experience.debug
+        this.scene = this.experience.scene
+        this.world = this.experience.world
+
+        this.mesh = _mesh
+        this.sourcePath = _sourcePath
+
+        this.setModel()
+    }
+
+    setModel()
+    {
+        this.model = {}
+
+        // Check if source is a website URL (starts with http)
+        const isWebsite = this.sourcePath.startsWith('http://') || this.sourcePath.startsWith('https://');
+
+        if (isWebsite) {
+            // Create iframe for website
+            this.model.element = document.createElement('iframe')
+            this.model.element.src = this.sourcePath
+            this.model.element.style.width = '1920px'
+            this.model.element.style.height = '1080px'
+            this.model.element.style.border = 'none'
+            this.model.element.style.position = 'absolute'
+            this.model.element.style.top = '0'
+            this.model.element.style.left = '0'
+            this.model.element.style.pointerEvents = 'none'
+            this.model.element.style.visibility = 'hidden'
+            document.body.appendChild(this.model.element)
+
+            // Create canvas for rendering
+            const canvas = document.createElement('canvas')
+            canvas.width = 1920
+            canvas.height = 1080
+
+            // Create texture from canvas
+            this.model.texture = new THREE.CanvasTexture(canvas)
+            this.model.texture.encoding = THREE.sRGBEncoding
+            this.model.canvas = canvas
+            this.model.ctx = canvas.getContext('2d')
+
+            // Make iframe visible and position it to match 3D screen
+            this.model.element.style.visibility = 'visible'
+            this.model.element.style.pointerEvents = 'auto'
+            
+            this.isWebsite = true
+            this.updateIframePosition()
+        } else {
+            // Original video element
+            this.model.element = document.createElement('video')
+            this.model.element.muted = true
+            this.model.element.loop = true
+            this.model.element.controls = true
+            this.model.element.playsInline = true
+            this.model.element.autoplay = true
+            this.model.element.src = this.sourcePath
+            this.model.element.play()
+
+            // Texture
+            this.model.texture = new THREE.VideoTexture(this.model.element)
+            this.model.texture.encoding = THREE.sRGBEncoding
+            
+            this.isWebsite = false
+        }
+        
+        // Material
+        this.model.material = new THREE.MeshBasicMaterial({
+            map: this.model.texture
+        })
+
+        // Mesh
+        this.model.mesh = this.mesh
+        this.model.mesh.material = this.model.material
+        this.scene.add(this.model.mesh)
+    }
+    
+    updateIframePosition() {
+        if (!this.isWebsite || !this.model.element) return;
+        
+        // Get screen position in 3D world
+        const mesh = this.model.mesh;
+        if (!mesh) return;
+        
+        // Project 3D position to 2D screen coordinates
+        const camera = this.experience.camera.instance;
+        const canvas = this.experience.renderer.instance.domElement;
+        
+        // Get the 4 corners of the screen mesh
+        const geometry = mesh.geometry;
+        if (!geometry) return;
+        
+        // Get bounding box
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox;
+        
+        // Get world position of corners
+        const corners = [
+            new THREE.Vector3(box.min.x, box.max.y, 0),
+            new THREE.Vector3(box.max.x, box.max.y, 0),
+            new THREE.Vector3(box.max.x, box.min.y, 0),
+            new THREE.Vector3(box.min.x, box.min.y, 0)
+        ];
+        
+        // Transform to world space
+        corners.forEach(corner => {
+            corner.applyMatrix4(mesh.matrixWorld);
+            corner.project(camera);
+            
+            // Convert to screen coordinates
+            corner.x = (corner.x + 1) / 2 * canvas.clientWidth;
+            corner.y = -(corner.y - 1) / 2 * canvas.clientHeight;
+        });
+        
+        // Calculate iframe position and size
+        const minX = Math.min(...corners.map(c => c.x));
+        const maxX = Math.max(...corners.map(c => c.x));
+        const minY = Math.min(...corners.map(c => c.y));
+        const maxY = Math.max(...corners.map(c => c.y));
+        
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        // Position iframe
+        this.model.element.style.left = minX + 'px';
+        this.model.element.style.top = minY + 'px';
+        this.model.element.style.width = width + 'px';
+        this.model.element.style.height = height + 'px';
+        this.model.element.style.transform = 'none';
+    }
+
+    update()
+    {
+        if (this.isWebsite) {
+            this.updateIframePosition();
+        }
+    }
+}
