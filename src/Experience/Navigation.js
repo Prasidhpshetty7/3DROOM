@@ -259,11 +259,13 @@ export default class Navigation
     }
 
     update() {
-        // If in PC zoom states or returning, block all camera updates except lookAt
+        // If in PC zoom states or returning, block ALL camera updates
         if (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning') {
+            // Only update lookAt for zoomed states, not during return
             if (this.pcScreenCenter && this.pcZoomState !== 'returning') {
                 this.camera.modes.default.instance.lookAt(this.pcScreenCenter);
             }
+            // Don't run any of the spherical camera update code below
             return;
         }
         // If zoomed in on laptop, block all camera updates except lookAt
@@ -289,7 +291,7 @@ export default class Navigation
             return;
         }
         /**
-         * View
+         * View - ONLY runs when not in any zoom state
          */
         // Zoom
         this.view.spherical.value.radius += this.view.zoom.delta * this.view.zoom.sensitivity
