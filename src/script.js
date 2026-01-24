@@ -41,19 +41,27 @@ function startFileCycle() {
     }, 500) // 2 per second
 }
 
-// Update progress bar
+// Update progress bar based on actual asset loading
 function updateProgress() {
-    progress += (100 / 4000) * 50 // 4 seconds total
+    // If assets are being loaded, sync progress with actual loading
+    if (window.experience && window.experience.resources) {
+        const resources = window.experience.resources
+        if (resources.loaded !== undefined && resources.toLoad !== undefined) {
+            const actualProgress = (resources.loaded / resources.toLoad) * 100
+            progress = Math.min(actualProgress, 99) // Keep at 99% until fully loaded
+        } else {
+            // Fallback to time-based progress
+            progress += (100 / 4000) * 50
+        }
+    } else {
+        // Initial progress before Experience is ready
+        progress += (100 / 4000) * 50
+    }
+    
     const p = Math.min(Math.round(progress), 100)
     if(loadingBar) loadingBar.style.width = p + '%'
     if(loadingShine) loadingShine.style.left = (p - 30) + '%'
     if(loadingPercent) loadingPercent.textContent = p + '%'
-    
-    if(progress >= 100) {
-        clearInterval(progressInterval)
-        clearInterval(fileInterval)
-        showStartButton()
-    }
 }
 
 // Preload audio for instant playback
@@ -103,12 +111,10 @@ function showStartButton() {
             // Then hide loading screen
             if(loadingScreen) loadingScreen.classList.add('hidden')
             
-            // Fade in the 3D experience
+            // Fade in the 3D experience IMMEDIATELY (no delay)
             const experience = document.querySelector('.experience')
             if(experience) {
-                setTimeout(() => {
-                    experience.classList.add('visible')
-                }, 100)
+                experience.classList.add('visible')
             }
             
             // Show click prompt after loading screen fades
@@ -153,10 +159,45 @@ if(soundToggle) {
 startFileCycle()
 progressInterval = setInterval(updateProgress, 50)
 
-// Create experience
+// Create experience - start loading assets immediately
 window.experience = new Experience({
     targetElement: document.querySelector('.experience')
 })
+
+// Wait for assets to load before showing START button
+let assetsLoaded = false
+let maxWaitTime = 8000 // 8 seconds max
+let startTime = Date.now()
+
+// Check if resources are loaded
+const checkAssetsLoaded = setInterval(() => {
+    const elapsed = Date.now() - startTime
+    
+    // Check if all resources are loaded
+    if (window.experience && window.experience.resources && window.experience.resources.items) {
+        const resources = window.experience.resources
+        // Check if the main models are loaded
+        if (resources.items.roomModel && resources.items.pcScreenModel && resources.items.macScreenModel) {
+            assetsLoaded = true
+            clearInterval(checkAssetsLoaded)
+            // Force progress to 100% and show start button
+            progress = 100
+            clearInterval(progressInterval)
+            clearInterval(fileInterval)
+            showStartButton()
+        }
+    }
+    
+    // Force show after 8 seconds even if not fully loaded
+    if (elapsed >= maxWaitTime && !assetsLoaded) {
+        assetsLoaded = true
+        clearInterval(checkAssetsLoaded)
+        progress = 100
+        clearInterval(progressInterval)
+        clearInterval(fileInterval)
+        showStartButton()
+    }
+}, 100) // Check every 100ms
 
 // Click anywhere prompt with typing effect
 let promptShown = false
