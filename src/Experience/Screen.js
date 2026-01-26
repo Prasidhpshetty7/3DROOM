@@ -36,7 +36,7 @@ export default class Screen
             this.model.element.style.top = '0'
             this.model.element.style.left = '0'
             this.model.element.style.pointerEvents = 'auto'
-            this.model.element.style.visibility = 'hidden' // Hide until positioned correctly
+            this.model.element.style.visibility = 'visible'
             this.model.element.style.zIndex = '1'
             document.body.appendChild(this.model.element)
 
@@ -44,15 +44,17 @@ export default class Screen
             const canvas = document.createElement('canvas')
             canvas.width = 1920
             canvas.height = 1080
+            const ctx = canvas.getContext('2d')
+            ctx.fillStyle = '#000'
+            ctx.fillRect(0, 0, 1920, 1080)
 
             // Create texture from canvas
             this.model.texture = new THREE.CanvasTexture(canvas)
             this.model.texture.encoding = THREE.sRGBEncoding
             this.model.canvas = canvas
-            this.model.ctx = canvas.getContext('2d')
+            this.model.ctx = ctx
             
             this.isWebsite = true
-            this.isPositioned = false
             this.updateIframePosition()
         } else {
             // Original video element
@@ -86,23 +88,18 @@ export default class Screen
     updateIframePosition() {
         if (!this.isWebsite || !this.model.element) return;
         
-        // Get screen position in 3D world
         const mesh = this.model.mesh;
         if (!mesh) return;
         
-        // Project 3D position to 2D screen coordinates
         const camera = this.experience.camera.instance;
         const canvas = this.experience.renderer.instance.domElement;
         
-        // Get the 4 corners of the screen mesh
         const geometry = mesh.geometry;
         if (!geometry) return;
         
-        // Get bounding box
         geometry.computeBoundingBox();
         const box = geometry.boundingBox;
         
-        // Get world position of corners
         const corners = [
             new THREE.Vector3(box.min.x, box.max.y, 0),
             new THREE.Vector3(box.max.x, box.max.y, 0),
@@ -110,17 +107,13 @@ export default class Screen
             new THREE.Vector3(box.min.x, box.min.y, 0)
         ];
         
-        // Transform to world space
         corners.forEach(corner => {
             corner.applyMatrix4(mesh.matrixWorld);
             corner.project(camera);
-            
-            // Convert to screen coordinates
             corner.x = (corner.x + 1) / 2 * canvas.clientWidth;
             corner.y = -(corner.y - 1) / 2 * canvas.clientHeight;
         });
         
-        // Calculate iframe position and size
         const minX = Math.min(...corners.map(c => c.x));
         const maxX = Math.max(...corners.map(c => c.x));
         const minY = Math.min(...corners.map(c => c.y));
@@ -129,25 +122,10 @@ export default class Screen
         const width = maxX - minX;
         const height = maxY - minY;
         
-        // Only show iframe if it has valid dimensions and is on screen
-        if (width > 10 && height > 10 && minX < canvas.clientWidth && maxX > 0 && minY < canvas.clientHeight && maxY > 0) {
-            // Position iframe
-            this.model.element.style.left = minX + 'px';
-            this.model.element.style.top = minY + 'px';
-            this.model.element.style.width = width + 'px';
-            this.model.element.style.height = height + 'px';
-            this.model.element.style.transform = 'none';
-            
-            // Show iframe once positioned
-            if (!this.isPositioned) {
-                this.model.element.style.visibility = 'visible';
-                this.isPositioned = true;
-            }
-        } else {
-            // Hide if off screen
-            this.model.element.style.visibility = 'hidden';
-            this.isPositioned = false;
-        }
+        this.model.element.style.left = minX + 'px';
+        this.model.element.style.top = minY + 'px';
+        this.model.element.style.width = width + 'px';
+        this.model.element.style.height = height + 'px';
     }
 
     update()
