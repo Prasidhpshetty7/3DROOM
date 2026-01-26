@@ -36,7 +36,7 @@ export default class Screen
             this.model.element.style.top = '0'
             this.model.element.style.left = '0'
             this.model.element.style.pointerEvents = 'auto'
-            this.model.element.style.visibility = 'visible'
+            this.model.element.style.visibility = 'hidden' // Hide until positioned correctly
             this.model.element.style.zIndex = '1'
             document.body.appendChild(this.model.element)
 
@@ -50,9 +50,9 @@ export default class Screen
             this.model.texture.encoding = THREE.sRGBEncoding
             this.model.canvas = canvas
             this.model.ctx = canvas.getContext('2d')
-
             
             this.isWebsite = true
+            this.isPositioned = false
             this.updateIframePosition()
         } else {
             // Original video element
@@ -129,12 +129,25 @@ export default class Screen
         const width = maxX - minX;
         const height = maxY - minY;
         
-        // Position iframe
-        this.model.element.style.left = minX + 'px';
-        this.model.element.style.top = minY + 'px';
-        this.model.element.style.width = width + 'px';
-        this.model.element.style.height = height + 'px';
-        this.model.element.style.transform = 'none';
+        // Only show iframe if it has valid dimensions and is on screen
+        if (width > 10 && height > 10 && minX < canvas.clientWidth && maxX > 0 && minY < canvas.clientHeight && maxY > 0) {
+            // Position iframe
+            this.model.element.style.left = minX + 'px';
+            this.model.element.style.top = minY + 'px';
+            this.model.element.style.width = width + 'px';
+            this.model.element.style.height = height + 'px';
+            this.model.element.style.transform = 'none';
+            
+            // Show iframe once positioned
+            if (!this.isPositioned) {
+                this.model.element.style.visibility = 'visible';
+                this.isPositioned = true;
+            }
+        } else {
+            // Hide if off screen
+            this.model.element.style.visibility = 'hidden';
+            this.isPositioned = false;
+        }
     }
 
     update()
