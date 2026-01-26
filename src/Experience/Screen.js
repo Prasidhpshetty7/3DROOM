@@ -35,8 +35,9 @@ export default class Screen
             this.model.element.style.position = 'absolute'
             this.model.element.style.top = '0'
             this.model.element.style.left = '0'
-            this.model.element.style.pointerEvents = 'none'
-            this.model.element.style.visibility = 'hidden'
+            this.model.element.style.pointerEvents = 'auto'
+            this.model.element.style.visibility = 'visible'
+            this.model.element.style.zIndex = '1'
             document.body.appendChild(this.model.element)
 
             // Create canvas for rendering
@@ -50,9 +51,6 @@ export default class Screen
             this.model.canvas = canvas
             this.model.ctx = canvas.getContext('2d')
 
-            // Make iframe visible and position it to match 3D screen
-            this.model.element.style.visibility = 'visible'
-            this.model.element.style.pointerEvents = 'auto'
             
             this.isWebsite = true
             this.updateIframePosition()
