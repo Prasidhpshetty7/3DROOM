@@ -284,7 +284,7 @@ export default class World
     {
         this.pcScreen = new Screen(
             this.resources.items.pcScreenModel.scene.children[0],
-            'https://os.prasidhshetty.in'
+            '/assets/videoPortfolio.mp4'
         )
         this.macScreen = new Screen(
             this.resources.items.macScreenModel.scene.children[0],

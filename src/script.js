@@ -58,7 +58,7 @@ function updateProgress() {
         progress += (100 / 4000) * 50
     }
     
-    const p = Math.min(Math.round(progress), 100)
+    const p = Math.min(Math.round(progress), 99) // Cap at 99% here
     if(loadingBar) loadingBar.style.width = p + '%'
     if(loadingShine) loadingShine.style.left = (p - 30) + '%'
     if(loadingPercent) loadingPercent.textContent = p + '%'
@@ -73,11 +73,16 @@ if(ambientAudio) {
     ambientAudio.load() // Preload
 }
 
-// Show start button
+// Show start button - now also updates to 100% simultaneously
 function showStartButton() {
+    // Update to 100% and show START button together
+    if(loadingBar) loadingBar.style.width = '100%'
+    if(loadingShine) loadingShine.style.left = '70%'
+    if(loadingPercent) loadingPercent.textContent = '100%'
     if(loadingStatus) loadingStatus.textContent = "System ready. Welcome to THE ROOM."
+    
     if(loadingStartBtn) {
-        // Show START button immediately when progress reaches 100%
+        // Show START button simultaneously with 100%
         loadingStartBtn.classList.add('visible')
         loadingStartBtn.addEventListener('click', () => {
             // Play audio IMMEDIATELY - before anything else
@@ -172,20 +177,17 @@ let startTime = Date.now()
 const checkAssetsLoaded = setInterval(() => {
     const elapsed = Date.now() - startTime
     
-    // Check if all resources are loaded (progress = 100%)
+    // Check if all resources are loaded (progress reaches 99%)
     if (window.experience && window.experience.resources) {
         const resources = window.experience.resources
         if (resources.loaded !== undefined && resources.toLoad !== undefined) {
             if (resources.loaded >= resources.toLoad) {
-                // All assets loaded!
+                // All assets loaded! Stop at 99%, then show 100% with START button
                 assetsLoaded = true
                 clearInterval(checkAssetsLoaded)
                 clearInterval(progressInterval)
                 clearInterval(fileInterval)
-                progress = 100
-                if(loadingBar) loadingBar.style.width = '100%'
-                if(loadingShine) loadingShine.style.left = '70%'
-                if(loadingPercent) loadingPercent.textContent = '100%'
+                // showStartButton will update to 100% and show button together
                 showStartButton()
             }
         }
@@ -197,10 +199,7 @@ const checkAssetsLoaded = setInterval(() => {
         clearInterval(checkAssetsLoaded)
         clearInterval(progressInterval)
         clearInterval(fileInterval)
-        progress = 100
-        if(loadingBar) loadingBar.style.width = '100%'
-        if(loadingShine) loadingShine.style.left = '70%'
-        if(loadingPercent) loadingPercent.textContent = '100%'
+        // showStartButton will update to 100% and show button together
         showStartButton()
     }
 }, 100) // Check every 100ms
