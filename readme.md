@@ -1,3 +1,24 @@
+# 3DROOM
+
+## Overview
+3DROOM is an experimental web project focused on creating a 3D-inspired interactive environment in the browser. The project explores spatial layout, motion, and depth to deliver a more immersive frontend experience.
+
+## Tech Stack
+- HTML
+- CSS
+- JavaScript
+
+## Key Focus Areas
+- 3D-style visual effects
+- Interactive motion and transitions
+- Immersive UI experimentation
+
+## Development Style
+Built using a **vibe coding** workflow, emphasizing creative exploration, visual feedback, and iterative refinement.
+
+## How to Run
+Open the `index.html` file in a modern browser to explore the 3D environment.
+
 # My 3D Room
 <p align="center">
 My room in three JS
@@ -7,13 +28,7 @@ Fully controlled 3D environment
 Fully customizable user-experience.
 <br>
 <br>        
-<a href="https://my-3-d-room.vercel.app">
-        <img alt="Thumbnail" src="./src/Thumbnail.jpg" />
-    </a>
-<br>
-<a href="https://my-3-d-room.vercel.app">
-        Demo
-    </a>
+
 </p>
 
 ## Windows Setup
@@ -69,4 +84,4 @@ npm run build
 
 ## Follow me on
 
-[Instagram](https://www.instagram.com/houssem_lachtar/), [Linkedin ](https://www.linkedin.com/in/houssem-lachtar/), [Codepen](https://codepen.io/houssem-lachtar), [GitHub](https://github.com/houssemlachtar)
+[Instagram](https://www.instagram.com/mr__shxtty/), [Linkedin ](https://www.linkedin.com/in/prasidhpshetty/), [GitHub](https://github.com/prasidhpshetty7)
