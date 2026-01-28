@@ -37,7 +37,14 @@ export default class Navigation
         // Listen for mouse move to handle zoom-out and pan
         this.targetElement.addEventListener('mousemove', this.onMouseMoveAdvanced.bind(this))
         
-        // Enable clicks 2 seconds after START button is pressed
+        this.tvZoomed = false
+        this.tvZoomInComplete = false
+        
+        // Free camera mode
+        this.freeCameraMode = false
+        this.freeCameraButton = document.getElementById('free-camera-toggle')
+        
+        // Enable clicks after START button is pressed
         const loadingStartBtn = document.getElementById('loading-start-btn')
         if(loadingStartBtn) {
             loadingStartBtn.addEventListener('click', () => {
@@ -51,9 +58,14 @@ export default class Navigation
                 this.clickEnabled = true
             }, 2000)
         }
-
-        this.tvZoomed = false
-        this.tvZoomInComplete = false
+        
+        // Free camera button click handler
+        if(this.freeCameraButton) {
+            this.freeCameraButton.addEventListener('click', () => {
+                this.toggleFreeCamera()
+            })
+        }
+        
         // Dev mode: toggled by pressing 'D' on the keyboard
         this.devMode = false;
         this.devPanel = null;
@@ -131,10 +143,12 @@ export default class Navigation
         this.view.drag.previous.x = 0
         this.view.drag.previous.y = 0
         this.view.drag.sensitivity = 2
+        this.view.drag.freeCameraSensitivity = 5 // Higher sensitivity for free camera
         this.view.drag.alternative = false
 
         this.view.zoom = {}
         this.view.zoom.sensitivity = 0.01
+        this.view.zoom.freeCameraSensitivity = 0.05 // Higher sensitivity for free camera
         this.view.zoom.delta = 0
 
         /**
@@ -259,8 +273,12 @@ export default class Navigation
     }
 
     update() {
+        // If in free camera mode, use higher sensitivity and no limits
+        const currentSensitivity = this.freeCameraMode ? this.view.drag.freeCameraSensitivity : this.view.drag.sensitivity
+        const currentZoomSensitivity = this.freeCameraMode ? this.view.zoom.freeCameraSensitivity : this.view.zoom.sensitivity
+        
         // If in PC zoom states or returning, block ALL camera updates
-        if (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning') {
+        if (!this.freeCameraMode && (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning')) {
             // Only update lookAt for zoomed states, not during return
             if (this.pcScreenCenter && this.pcZoomState !== 'returning') {
                 this.camera.modes.default.instance.lookAt(this.pcScreenCenter);
@@ -269,7 +287,7 @@ export default class Navigation
             return;
         }
         // If zoomed in on laptop, block all camera updates except lookAt
-        if (this.laptopZoomed) {
+        if (!this.freeCameraMode && this.laptopZoomed) {
             const laptopScreen = this.world.macScreen?.model?.mesh;
             if (laptopScreen) {
                 const box = new THREE.Box3().setFromObject(laptopScreen);
@@ -280,7 +298,7 @@ export default class Navigation
             return;
         }
         // If zoomed in on TV, block all camera updates except lookAt
-        if (this.tvZoomed) {
+        if (!this.freeCameraMode && this.tvZoomed) {
             const tvMesh = this.world.tvMesh;
             if (tvMesh) {
                 const box = new THREE.Box3().setFromObject(tvMesh);
@@ -294,10 +312,14 @@ export default class Navigation
          * View - ONLY runs when not in any zoom state
          */
         // Zoom
-        this.view.spherical.value.radius += this.view.zoom.delta * this.view.zoom.sensitivity
+        this.view.spherical.value.radius += this.view.zoom.delta * currentZoomSensitivity
 
-        // Apply limits
-        this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
+        // Apply limits (skip in free camera mode)
+        if (!this.freeCameraMode) {
+            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
+        } else {
+            this.view.spherical.value.radius = Math.max(this.view.spherical.value.radius, 1)
+        }
 
         // Drag
         if(this.view.drag.alternative)
@@ -314,19 +336,21 @@ export default class Navigation
             this.view.target.value.add(up)
             this.view.target.value.add(right)
 
-            // Apply limits
+            // Apply limits (always apply to keep camera in room)
             this.view.target.value.x = Math.min(Math.max(this.view.target.value.x, this.view.target.limits.x.min), this.view.target.limits.x.max)
             this.view.target.value.y = Math.min(Math.max(this.view.target.value.y, this.view.target.limits.y.min), this.view.target.limits.y.max)
             this.view.target.value.z = Math.min(Math.max(this.view.target.value.z, this.view.target.limits.z.min), this.view.target.limits.z.max)
         }
         else
         {
-            this.view.spherical.value.theta -= this.view.drag.delta.x * this.view.drag.sensitivity / this.config.smallestSide
-            this.view.spherical.value.phi -= this.view.drag.delta.y * this.view.drag.sensitivity / this.config.smallestSide    
+            this.view.spherical.value.theta -= this.view.drag.delta.x * currentSensitivity / this.config.smallestSide
+            this.view.spherical.value.phi -= this.view.drag.delta.y * currentSensitivity / this.config.smallestSide    
         
-            // Apply limits
-            this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
-            this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
+            // Apply limits (skip in free camera mode for rotation)
+            if (!this.freeCameraMode) {
+                this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
+                this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
+            }
         }
 
         this.view.drag.delta.x = 0
@@ -342,10 +366,25 @@ export default class Navigation
         this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * this.view.target.smoothing * this.time.delta
         this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * this.view.target.smoothing * this.time.delta
 
-        // Restore original camera update logic: no clamping or boundary logic
+        // Restore original camera update logic
         const viewPosition = new THREE.Vector3();
         viewPosition.setFromSpherical(this.view.spherical.smoothed);
         viewPosition.add(this.view.target.smoothed);
+        
+        // In free camera mode, apply room boundaries to prevent seeing through walls
+        if (this.freeCameraMode) {
+            // Room boundaries (adjust these values to match your room size)
+            const roomBounds = {
+                x: { min: -3.5, max: 3.5 },
+                y: { min: 1.5, max: 5.5 },
+                z: { min: -3.5, max: 3.5 }
+            }
+            
+            viewPosition.x = Math.min(Math.max(viewPosition.x, roomBounds.x.min), roomBounds.x.max)
+            viewPosition.y = Math.min(Math.max(viewPosition.y, roomBounds.y.min), roomBounds.y.max)
+            viewPosition.z = Math.min(Math.max(viewPosition.z, roomBounds.z.min), roomBounds.z.max)
+        }
+        
         this.camera.modes.default.instance.position.copy(viewPosition);
         this.camera.modes.default.instance.lookAt(this.view.target.smoothed);
 
@@ -364,6 +403,9 @@ export default class Navigation
      * Advanced mouse move handler for PC zoom/pan system and laptop/TV screens
      */
     onMouseMoveAdvanced(event) {
+        // Don't process mouse move for zoom/pan in free camera mode
+        if (this.freeCameraMode) return;
+        
         const rect = this.targetElement.getBoundingClientRect();
         this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -445,6 +487,9 @@ export default class Navigation
      * Click handler: Advanced PC zoom system + laptop/TV zoom
      */
     onClick(event) {
+        // Don't process clicks in free camera mode
+        if (this.freeCameraMode) return;
+        
         // Don't process clicks until 2 seconds after START button
         if (!this.clickEnabled) return;
         
@@ -1088,6 +1133,21 @@ export default class Navigation
             overwrite: true,
             ease: 'power2.inOut'
         });
+    }
+
+    toggleFreeCamera()
+    {
+        this.freeCameraMode = !this.freeCameraMode
+        
+        if (this.freeCameraButton) {
+            if (this.freeCameraMode) {
+                this.freeCameraButton.classList.add('active')
+            } else {
+                this.freeCameraButton.classList.remove('active')
+            }
+        }
+        
+        console.log('Free camera mode:', this.freeCameraMode ? 'ON' : 'OFF')
     }
 
     createDevPanel() {

@@ -140,6 +140,19 @@ body.light-theme #theme-toggle
     color: #fff;
 }
 
+/* Free Camera Toggle in Info Panel */
+#free-camera-toggle.active
+{
+    background: rgba(76, 175, 80, 0.9);
+    color: #fff;
+}
+
+body.light-theme #free-camera-toggle.active
+{
+    background: rgba(76, 175, 80, 0.9);
+    color: #000;
+}
+
 /* Info Panel */
 .info-panel
 {
