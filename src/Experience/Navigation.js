@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import Experience from './Experience.js'
 import normalizeWheel from 'normalize-wheel'
+import { gsap } from 'gsap'
 
 export default class Navigation
 {
@@ -27,6 +28,26 @@ export default class Navigation
         this.view.spherical.limits.radius = { min: 10, max: 50 }
         this.view.spherical.limits.phi = { min: Math.PI * 0.15, max: Math.PI * 0.44 }
         this.view.spherical.limits.theta = { min: -Math.PI * 0.45, max: -Math.PI * 0.05 }
+
+        // Intro animation: rotate to final position after loading screen closes
+        const startIntroAnimation = () => {
+            gsap.to(this.view.spherical.value, {
+                theta: -Math.PI * 0.12,
+                duration: 5,
+                ease: 'power2.inOut'
+            })
+        }
+        
+        // Listen for loading screen to close
+        const loadingStartBtn = document.getElementById('loading-start-btn')
+        if(loadingStartBtn) {
+            loadingStartBtn.addEventListener('click', () => {
+                setTimeout(startIntroAnimation, 300)
+            })
+        } else {
+            // Fallback if no loading screen
+            setTimeout(startIntroAnimation, 300)
+        }
 
         this.view.target = {}
         this.view.target.value = new THREE.Vector3(0, 2.5, 0)
