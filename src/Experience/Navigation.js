@@ -1150,8 +1150,17 @@ export default class Navigation
         if (this.freeCameraButton) {
             if (this.freeCameraMode) {
                 this.freeCameraButton.classList.add('active')
+                
+                // When entering free camera mode, sync smoothed values with current values
+                // This prevents sudden jumps
+                this.view.spherical.smoothed.copy(this.view.spherical.value)
+                this.view.target.smoothed.copy(this.view.target.value)
             } else {
                 this.freeCameraButton.classList.remove('active')
+                
+                // When exiting free camera mode, sync smoothed values again
+                this.view.spherical.smoothed.copy(this.view.spherical.value)
+                this.view.target.smoothed.copy(this.view.target.value)
             }
         }
         
