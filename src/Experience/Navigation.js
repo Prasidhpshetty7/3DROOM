@@ -143,12 +143,12 @@ export default class Navigation
         this.view.drag.previous.x = 0
         this.view.drag.previous.y = 0
         this.view.drag.sensitivity = 2
-        this.view.drag.freeCameraSensitivity = 8 // Much higher sensitivity for free camera
+        this.view.drag.freeCameraSensitivity = 12 // Very high sensitivity for buttery smooth movement
         this.view.drag.alternative = false
 
         this.view.zoom = {}
         this.view.zoom.sensitivity = 0.01
-        this.view.zoom.freeCameraSensitivity = 0.1 // Much faster zoom for free camera
+        this.view.zoom.freeCameraSensitivity = 0.15 // Very fast zoom
         this.view.zoom.delta = 0
 
         /**
@@ -273,9 +273,11 @@ export default class Navigation
     }
 
     update() {
-        // If in free camera mode, use higher sensitivity and no limits
+        // If in free camera mode, use higher sensitivity and faster smoothing
         const currentSensitivity = this.freeCameraMode ? this.view.drag.freeCameraSensitivity : this.view.drag.sensitivity
         const currentZoomSensitivity = this.freeCameraMode ? this.view.zoom.freeCameraSensitivity : this.view.zoom.sensitivity
+        const currentSmoothing = this.freeCameraMode ? 0.003 : this.view.spherical.smoothing // 3x faster smoothing in free mode
+        const currentTargetSmoothing = this.freeCameraMode ? 0.003 : this.view.target.smoothing
         
         // If in PC zoom states or returning, block ALL camera updates
         if (!this.freeCameraMode && (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning')) {
@@ -358,14 +360,14 @@ export default class Navigation
         this.view.drag.delta.y = 0
         this.view.zoom.delta = 0
 
-        // Smoothing
-        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * this.view.spherical.smoothing * this.time.delta
-        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * this.view.spherical.smoothing * this.time.delta
-        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * this.view.spherical.smoothing * this.time.delta
+        // Smoothing - use faster smoothing in free camera mode
+        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * currentSmoothing * this.time.delta
+        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * currentSmoothing * this.time.delta
+        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * currentSmoothing * this.time.delta
 
-        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * this.view.target.smoothing * this.time.delta
-        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * this.view.target.smoothing * this.time.delta
-        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * this.view.target.smoothing * this.time.delta
+        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * currentTargetSmoothing * this.time.delta
+        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * currentTargetSmoothing * this.time.delta
+        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * currentTargetSmoothing * this.time.delta
 
         // Restore original camera update logic
         const viewPosition = new THREE.Vector3();
