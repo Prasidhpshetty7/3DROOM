@@ -143,12 +143,12 @@ export default class Navigation
         this.view.drag.previous.x = 0
         this.view.drag.previous.y = 0
         this.view.drag.sensitivity = 2
-        this.view.drag.freeCameraSensitivity = 5 // Higher sensitivity for free camera
+        this.view.drag.freeCameraSensitivity = 8 // Much higher sensitivity for free camera
         this.view.drag.alternative = false
 
         this.view.zoom = {}
         this.view.zoom.sensitivity = 0.01
-        this.view.zoom.freeCameraSensitivity = 0.05 // Higher sensitivity for free camera
+        this.view.zoom.freeCameraSensitivity = 0.1 // Much faster zoom for free camera
         this.view.zoom.delta = 0
 
         /**
@@ -314,11 +314,12 @@ export default class Navigation
         // Zoom
         this.view.spherical.value.radius += this.view.zoom.delta * currentZoomSensitivity
 
-        // Apply limits (skip in free camera mode)
+        // Apply limits
         if (!this.freeCameraMode) {
             this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
         } else {
-            this.view.spherical.value.radius = Math.max(this.view.spherical.value.radius, 1)
+            // In free camera mode, allow wider range but prevent getting too close
+            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, 3), 60)
         }
 
         // Drag
@@ -373,16 +374,21 @@ export default class Navigation
         
         // In free camera mode, apply room boundaries to prevent seeing through walls
         if (this.freeCameraMode) {
-            // Room boundaries (adjust these values to match your room size)
+            // Room boundaries - tighter to prevent wall clipping
             const roomBounds = {
-                x: { min: -3.5, max: 3.5 },
-                y: { min: 1.5, max: 5.5 },
-                z: { min: -3.5, max: 3.5 }
+                x: { min: -3.0, max: 3.0 },
+                y: { min: 2.0, max: 5.0 },
+                z: { min: -3.0, max: 3.0 }
             }
             
             viewPosition.x = Math.min(Math.max(viewPosition.x, roomBounds.x.min), roomBounds.x.max)
             viewPosition.y = Math.min(Math.max(viewPosition.y, roomBounds.y.min), roomBounds.y.max)
             viewPosition.z = Math.min(Math.max(viewPosition.z, roomBounds.z.min), roomBounds.z.max)
+            
+            // Also limit the target to stay in room
+            this.view.target.smoothed.x = Math.min(Math.max(this.view.target.smoothed.x, -3.0), 3.0)
+            this.view.target.smoothed.y = Math.min(Math.max(this.view.target.smoothed.y, 1.0), 5.0)
+            this.view.target.smoothed.z = Math.min(Math.max(this.view.target.smoothed.z, -3.0), 3.0)
         }
         
         this.camera.modes.default.instance.position.copy(viewPosition);
