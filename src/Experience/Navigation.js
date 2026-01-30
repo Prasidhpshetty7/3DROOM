@@ -40,6 +40,14 @@ export default class Navigation
         this.tvZoomed = false
         this.tvZoomInComplete = false
         
+        // Video button toggle (just visual, no free camera mode)
+        this.videoButton = document.getElementById('free-camera-toggle')
+        if(this.videoButton) {
+            this.videoButton.addEventListener('click', () => {
+                this.videoButton.classList.toggle('active')
+            })
+        }
+        
         // Enable clicks after START button is pressed
         const loadingStartBtn = document.getElementById('loading-start-btn')
         if(loadingStartBtn) {
