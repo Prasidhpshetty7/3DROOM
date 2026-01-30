@@ -43,6 +43,7 @@ export default class Navigation
         // Free camera mode
         this.freeCameraMode = false
         this.freeCameraButton = document.getElementById('free-camera-toggle')
+        this.justToggledFreeCamera = false // Track if we just toggled to prevent position jump
         
         // Enable clicks after START button is pressed
         const loadingStartBtn = document.getElementById('loading-start-btn')
@@ -375,7 +376,8 @@ export default class Navigation
         viewPosition.add(this.view.target.smoothed);
         
         // In free camera mode, apply room boundaries to prevent seeing through walls
-        if (this.freeCameraMode) {
+        // BUT skip boundary clamping on the frame we just toggled free camera mode
+        if (this.freeCameraMode && !this.justToggledFreeCamera) {
             // Room boundaries - tighter to prevent wall clipping
             const roomBounds = {
                 x: { min: -3.0, max: 3.0 },
@@ -383,14 +385,32 @@ export default class Navigation
                 z: { min: -3.0, max: 3.0 }
             }
             
-            viewPosition.x = Math.min(Math.max(viewPosition.x, roomBounds.x.min), roomBounds.x.max)
-            viewPosition.y = Math.min(Math.max(viewPosition.y, roomBounds.y.min), roomBounds.y.max)
-            viewPosition.z = Math.min(Math.max(viewPosition.z, roomBounds.z.min), roomBounds.z.max)
+            // Only clamp if actually outside bounds
+            if (viewPosition.x < roomBounds.x.min || viewPosition.x > roomBounds.x.max) {
+                viewPosition.x = Math.min(Math.max(viewPosition.x, roomBounds.x.min), roomBounds.x.max)
+            }
+            if (viewPosition.y < roomBounds.y.min || viewPosition.y > roomBounds.y.max) {
+                viewPosition.y = Math.min(Math.max(viewPosition.y, roomBounds.y.min), roomBounds.y.max)
+            }
+            if (viewPosition.z < roomBounds.z.min || viewPosition.z > roomBounds.z.max) {
+                viewPosition.z = Math.min(Math.max(viewPosition.z, roomBounds.z.min), roomBounds.z.max)
+            }
             
-            // Also limit the target to stay in room
-            this.view.target.smoothed.x = Math.min(Math.max(this.view.target.smoothed.x, -3.0), 3.0)
-            this.view.target.smoothed.y = Math.min(Math.max(this.view.target.smoothed.y, 1.0), 5.0)
-            this.view.target.smoothed.z = Math.min(Math.max(this.view.target.smoothed.z, -3.0), 3.0)
+            // Also limit the target to stay in room (only if outside)
+            if (this.view.target.smoothed.x < -3.0 || this.view.target.smoothed.x > 3.0) {
+                this.view.target.smoothed.x = Math.min(Math.max(this.view.target.smoothed.x, -3.0), 3.0)
+            }
+            if (this.view.target.smoothed.y < 1.0 || this.view.target.smoothed.y > 5.0) {
+                this.view.target.smoothed.y = Math.min(Math.max(this.view.target.smoothed.y, 1.0), 5.0)
+            }
+            if (this.view.target.smoothed.z < -3.0 || this.view.target.smoothed.z > 3.0) {
+                this.view.target.smoothed.z = Math.min(Math.max(this.view.target.smoothed.z, -3.0), 3.0)
+            }
+        }
+        
+        // Reset the toggle flag after first frame
+        if (this.justToggledFreeCamera) {
+            this.justToggledFreeCamera = false
         }
         
         this.camera.modes.default.instance.position.copy(viewPosition);
@@ -1146,6 +1166,7 @@ export default class Navigation
     toggleFreeCamera()
     {
         this.freeCameraMode = !this.freeCameraMode
+        this.justToggledFreeCamera = true // Set flag to skip boundary clamping on next frame
         
         if (this.freeCameraButton) {
             if (this.freeCameraMode) {
