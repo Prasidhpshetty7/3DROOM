@@ -40,11 +40,35 @@ export default class Navigation
         this.tvZoomed = false
         this.tvZoomInComplete = false
         
-        // Video button toggle (just visual, no free camera mode)
+        // Video button toggle - enables/disables free exploration mode
+        this.freeExploreMode = false
         this.videoButton = document.getElementById('free-camera-toggle')
         if(this.videoButton) {
             this.videoButton.addEventListener('click', () => {
-                this.videoButton.classList.toggle('active')
+                this.freeExploreMode = !this.freeExploreMode
+                
+                if (this.freeExploreMode) {
+                    this.videoButton.classList.add('active')
+                    
+                    // Exit any zoom states when entering free explore mode
+                    if (this.pcZoomState !== 'none') {
+                        this.pcZoomState = 'none'
+                        this.pcScreenCenter = null
+                    }
+                    if (this.laptopZoomed) {
+                        this.laptopZoomed = false
+                        this.laptopZoomInComplete = false
+                    }
+                    if (this.tvZoomed) {
+                        this.tvZoomed = false
+                        this.tvZoomInComplete = false
+                    }
+                    
+                    console.log('Free explore mode: ON')
+                } else {
+                    this.videoButton.classList.remove('active')
+                    console.log('Free explore mode: OFF')
+                }
             })
         }
         
@@ -268,8 +292,8 @@ export default class Navigation
     }
 
     update() {
-        // If in PC zoom states or returning, block ALL camera updates
-        if (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning') {
+        // If in PC zoom states or returning, block ALL camera updates (unless in free explore mode)
+        if (!this.freeExploreMode && (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning')) {
             // Only update lookAt for zoomed states, not during return
             if (this.pcScreenCenter && this.pcZoomState !== 'returning') {
                 this.camera.modes.default.instance.lookAt(this.pcScreenCenter);
@@ -277,8 +301,8 @@ export default class Navigation
             // Don't run any of the spherical camera update code below
             return;
         }
-        // If zoomed in on laptop, block all camera updates except lookAt
-        if (this.laptopZoomed) {
+        // If zoomed in on laptop, block all camera updates except lookAt (unless in free explore mode)
+        if (!this.freeExploreMode && this.laptopZoomed) {
             const laptopScreen = this.world.macScreen?.model?.mesh;
             if (laptopScreen) {
                 const box = new THREE.Box3().setFromObject(laptopScreen);
@@ -288,8 +312,8 @@ export default class Navigation
             }
             return;
         }
-        // If zoomed in on TV, block all camera updates except lookAt
-        if (this.tvZoomed) {
+        // If zoomed in on TV, block all camera updates except lookAt (unless in free explore mode)
+        if (!this.freeExploreMode && this.tvZoomed) {
             const tvMesh = this.world.tvMesh;
             if (tvMesh) {
                 const box = new THREE.Box3().setFromObject(tvMesh);
@@ -374,6 +398,9 @@ export default class Navigation
      * Advanced mouse move handler for PC zoom/pan system and laptop/TV screens
      */
     onMouseMoveAdvanced(event) {
+        // Don't process mouse move for zoom/pan in free explore mode
+        if (this.freeExploreMode) return;
+        
         const rect = this.targetElement.getBoundingClientRect();
         this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -455,6 +482,9 @@ export default class Navigation
      * Click handler: Advanced PC zoom system + laptop/TV zoom
      */
     onClick(event) {
+        // Don't process clicks in free explore mode
+        if (this.freeExploreMode) return;
+        
         // Don't process clicks until 2 seconds after START button
         if (!this.clickEnabled) return;
         
