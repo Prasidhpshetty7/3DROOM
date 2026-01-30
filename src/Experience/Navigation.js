@@ -50,6 +50,10 @@ export default class Navigation
                 if (this.freeExploreMode) {
                     this.videoButton.classList.add('active')
                     
+                    // Capture ACTUAL current camera position before exiting zoom states
+                    const currentPos = this.camera.modes.default.instance.position.clone()
+                    const currentTarget = this.view.target.smoothed.clone()
+                    
                     // Exit any zoom states when entering free explore mode
                     if (this.pcZoomState !== 'none') {
                         this.pcZoomState = 'none'
@@ -64,9 +68,34 @@ export default class Navigation
                         this.tvZoomInComplete = false
                     }
                     
-                    console.log('Free explore mode: ON')
+                    // Calculate spherical coordinates from actual current position
+                    const offset = currentPos.clone().sub(currentTarget)
+                    const spherical = new THREE.Spherical().setFromVector3(offset)
+                    
+                    // Set both value and smoothed to current actual state
+                    this.view.spherical.value.copy(spherical)
+                    this.view.spherical.smoothed.copy(spherical)
+                    this.view.target.value.copy(currentTarget)
+                    this.view.target.smoothed.copy(currentTarget)
+                    
+                    console.log('Free explore mode: ON at position:', currentPos)
                 } else {
                     this.videoButton.classList.remove('active')
+                    
+                    // Capture current position when exiting free explore mode
+                    const currentPos = this.camera.modes.default.instance.position.clone()
+                    const currentTarget = this.view.target.smoothed.clone()
+                    
+                    // Calculate spherical coordinates from actual current position
+                    const offset = currentPos.clone().sub(currentTarget)
+                    const spherical = new THREE.Spherical().setFromVector3(offset)
+                    
+                    // Set both value and smoothed to current actual state
+                    this.view.spherical.value.copy(spherical)
+                    this.view.spherical.smoothed.copy(spherical)
+                    this.view.target.value.copy(currentTarget)
+                    this.view.target.smoothed.copy(currentTarget)
+                    
                     console.log('Free explore mode: OFF')
                 }
             })
