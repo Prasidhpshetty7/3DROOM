@@ -1172,16 +1172,40 @@ export default class Navigation
             if (this.freeCameraMode) {
                 this.freeCameraButton.classList.add('active')
                 
-                // When entering free camera mode, sync smoothed values with current values
-                // This prevents sudden jumps
-                this.view.spherical.smoothed.copy(this.view.spherical.value)
-                this.view.target.smoothed.copy(this.view.target.value)
+                // Capture ACTUAL current camera position and calculate spherical from it
+                const currentPos = this.camera.modes.default.instance.position.clone()
+                const currentTarget = this.view.target.smoothed.clone()
+                
+                // Calculate spherical coordinates from actual position
+                const offset = currentPos.clone().sub(currentTarget)
+                const spherical = new THREE.Spherical().setFromVector3(offset)
+                
+                // Set both value and smoothed to current actual state
+                this.view.spherical.value.copy(spherical)
+                this.view.spherical.smoothed.copy(spherical)
+                this.view.target.value.copy(currentTarget)
+                this.view.target.smoothed.copy(currentTarget)
+                
+                console.log('Entering free camera at position:', currentPos)
+                console.log('Spherical:', spherical)
             } else {
                 this.freeCameraButton.classList.remove('active')
                 
-                // When exiting free camera mode, sync smoothed values again
-                this.view.spherical.smoothed.copy(this.view.spherical.value)
-                this.view.target.smoothed.copy(this.view.target.value)
+                // Capture ACTUAL current camera position and calculate spherical from it
+                const currentPos = this.camera.modes.default.instance.position.clone()
+                const currentTarget = this.view.target.smoothed.clone()
+                
+                // Calculate spherical coordinates from actual position
+                const offset = currentPos.clone().sub(currentTarget)
+                const spherical = new THREE.Spherical().setFromVector3(offset)
+                
+                // Set both value and smoothed to current actual state
+                this.view.spherical.value.copy(spherical)
+                this.view.spherical.smoothed.copy(spherical)
+                this.view.target.value.copy(currentTarget)
+                this.view.target.smoothed.copy(currentTarget)
+                
+                console.log('Exiting free camera at position:', currentPos)
             }
         }
         
