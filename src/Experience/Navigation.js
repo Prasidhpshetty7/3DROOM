@@ -1172,6 +1172,20 @@ export default class Navigation
             if (this.freeCameraMode) {
                 this.freeCameraButton.classList.add('active')
                 
+                // If we're in any zoom state, exit it first
+                if (this.pcZoomState !== 'none') {
+                    this.pcZoomState = 'none'
+                    this.pcScreenCenter = null
+                }
+                if (this.laptopZoomed) {
+                    this.laptopZoomed = false
+                    this.laptopZoomInComplete = false
+                }
+                if (this.tvZoomed) {
+                    this.tvZoomed = false
+                    this.tvZoomInComplete = false
+                }
+                
                 // Capture ACTUAL current camera position and calculate spherical from it
                 const currentPos = this.camera.modes.default.instance.position.clone()
                 const currentTarget = this.view.target.smoothed.clone()
@@ -1187,6 +1201,7 @@ export default class Navigation
                 this.view.target.smoothed.copy(currentTarget)
                 
                 console.log('Entering free camera at position:', currentPos)
+                console.log('Target:', currentTarget)
                 console.log('Spherical:', spherical)
             } else {
                 this.freeCameraButton.classList.remove('active')
