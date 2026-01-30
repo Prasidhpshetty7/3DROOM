@@ -40,11 +40,6 @@ export default class Navigation
         this.tvZoomed = false
         this.tvZoomInComplete = false
         
-        // Free camera mode
-        this.freeCameraMode = false
-        this.freeCameraButton = document.getElementById('free-camera-toggle')
-        this.justToggledFreeCamera = false // Track if we just toggled to prevent position jump
-        
         // Enable clicks after START button is pressed
         const loadingStartBtn = document.getElementById('loading-start-btn')
         if(loadingStartBtn) {
@@ -58,13 +53,6 @@ export default class Navigation
             setTimeout(() => {
                 this.clickEnabled = true
             }, 2000)
-        }
-        
-        // Free camera button click handler
-        if(this.freeCameraButton) {
-            this.freeCameraButton.addEventListener('click', () => {
-                this.toggleFreeCamera()
-            })
         }
         
         // Dev mode: toggled by pressing 'D' on the keyboard
@@ -144,12 +132,10 @@ export default class Navigation
         this.view.drag.previous.x = 0
         this.view.drag.previous.y = 0
         this.view.drag.sensitivity = 2
-        this.view.drag.freeCameraSensitivity = 12 // Very high sensitivity for buttery smooth movement
         this.view.drag.alternative = false
 
         this.view.zoom = {}
         this.view.zoom.sensitivity = 0.01
-        this.view.zoom.freeCameraSensitivity = 0.15 // Very fast zoom
         this.view.zoom.delta = 0
 
         /**
@@ -274,14 +260,8 @@ export default class Navigation
     }
 
     update() {
-        // If in free camera mode, use higher sensitivity and faster smoothing
-        const currentSensitivity = this.freeCameraMode ? this.view.drag.freeCameraSensitivity : this.view.drag.sensitivity
-        const currentZoomSensitivity = this.freeCameraMode ? this.view.zoom.freeCameraSensitivity : this.view.zoom.sensitivity
-        const currentSmoothing = this.freeCameraMode ? 0.003 : this.view.spherical.smoothing // 3x faster smoothing in free mode
-        const currentTargetSmoothing = this.freeCameraMode ? 0.003 : this.view.target.smoothing
-        
         // If in PC zoom states or returning, block ALL camera updates
-        if (!this.freeCameraMode && (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning')) {
+        if (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35' || this.pcZoomState === 'returning') {
             // Only update lookAt for zoomed states, not during return
             if (this.pcScreenCenter && this.pcZoomState !== 'returning') {
                 this.camera.modes.default.instance.lookAt(this.pcScreenCenter);
@@ -290,7 +270,7 @@ export default class Navigation
             return;
         }
         // If zoomed in on laptop, block all camera updates except lookAt
-        if (!this.freeCameraMode && this.laptopZoomed) {
+        if (this.laptopZoomed) {
             const laptopScreen = this.world.macScreen?.model?.mesh;
             if (laptopScreen) {
                 const box = new THREE.Box3().setFromObject(laptopScreen);
@@ -301,7 +281,7 @@ export default class Navigation
             return;
         }
         // If zoomed in on TV, block all camera updates except lookAt
-        if (!this.freeCameraMode && this.tvZoomed) {
+        if (this.tvZoomed) {
             const tvMesh = this.world.tvMesh;
             if (tvMesh) {
                 const box = new THREE.Box3().setFromObject(tvMesh);
@@ -315,15 +295,10 @@ export default class Navigation
          * View - ONLY runs when not in any zoom state
          */
         // Zoom
-        this.view.spherical.value.radius += this.view.zoom.delta * currentZoomSensitivity
+        this.view.spherical.value.radius += this.view.zoom.delta * this.view.zoom.sensitivity
 
         // Apply limits
-        if (!this.freeCameraMode) {
-            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
-        } else {
-            // In free camera mode, allow wider range but prevent getting too close
-            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, 3), 60)
-        }
+        this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
 
         // Drag
         if(this.view.drag.alternative)
@@ -347,71 +322,31 @@ export default class Navigation
         }
         else
         {
-            this.view.spherical.value.theta -= this.view.drag.delta.x * currentSensitivity / this.config.smallestSide
-            this.view.spherical.value.phi -= this.view.drag.delta.y * currentSensitivity / this.config.smallestSide    
+            this.view.spherical.value.theta -= this.view.drag.delta.x * this.view.drag.sensitivity / this.config.smallestSide
+            this.view.spherical.value.phi -= this.view.drag.delta.y * this.view.drag.sensitivity / this.config.smallestSide    
         
-            // Apply limits (skip in free camera mode for rotation)
-            if (!this.freeCameraMode) {
-                this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
-                this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
-            }
+            // Apply limits
+            this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
+            this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
         }
 
         this.view.drag.delta.x = 0
         this.view.drag.delta.y = 0
         this.view.zoom.delta = 0
 
-        // Smoothing - use faster smoothing in free camera mode
-        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * currentSmoothing * this.time.delta
-        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * currentSmoothing * this.time.delta
-        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * currentSmoothing * this.time.delta
+        // Smoothing
+        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * this.view.spherical.smoothing * this.time.delta
+        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * this.view.spherical.smoothing * this.time.delta
+        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * this.view.spherical.smoothing * this.time.delta
 
-        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * currentTargetSmoothing * this.time.delta
-        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * currentTargetSmoothing * this.time.delta
-        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * currentTargetSmoothing * this.time.delta
+        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * this.view.target.smoothing * this.time.delta
+        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * this.view.target.smoothing * this.time.delta
+        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * this.view.target.smoothing * this.time.delta
 
         // Restore original camera update logic
         const viewPosition = new THREE.Vector3();
         viewPosition.setFromSpherical(this.view.spherical.smoothed);
         viewPosition.add(this.view.target.smoothed);
-        
-        // In free camera mode, apply room boundaries to prevent seeing through walls
-        // BUT skip boundary clamping on the frame we just toggled free camera mode
-        if (this.freeCameraMode && !this.justToggledFreeCamera) {
-            // Room boundaries - tighter to prevent wall clipping
-            const roomBounds = {
-                x: { min: -3.0, max: 3.0 },
-                y: { min: 2.0, max: 5.0 },
-                z: { min: -3.0, max: 3.0 }
-            }
-            
-            // Only clamp if actually outside bounds
-            if (viewPosition.x < roomBounds.x.min || viewPosition.x > roomBounds.x.max) {
-                viewPosition.x = Math.min(Math.max(viewPosition.x, roomBounds.x.min), roomBounds.x.max)
-            }
-            if (viewPosition.y < roomBounds.y.min || viewPosition.y > roomBounds.y.max) {
-                viewPosition.y = Math.min(Math.max(viewPosition.y, roomBounds.y.min), roomBounds.y.max)
-            }
-            if (viewPosition.z < roomBounds.z.min || viewPosition.z > roomBounds.z.max) {
-                viewPosition.z = Math.min(Math.max(viewPosition.z, roomBounds.z.min), roomBounds.z.max)
-            }
-            
-            // Also limit the target to stay in room (only if outside)
-            if (this.view.target.smoothed.x < -3.0 || this.view.target.smoothed.x > 3.0) {
-                this.view.target.smoothed.x = Math.min(Math.max(this.view.target.smoothed.x, -3.0), 3.0)
-            }
-            if (this.view.target.smoothed.y < 1.0 || this.view.target.smoothed.y > 5.0) {
-                this.view.target.smoothed.y = Math.min(Math.max(this.view.target.smoothed.y, 1.0), 5.0)
-            }
-            if (this.view.target.smoothed.z < -3.0 || this.view.target.smoothed.z > 3.0) {
-                this.view.target.smoothed.z = Math.min(Math.max(this.view.target.smoothed.z, -3.0), 3.0)
-            }
-        }
-        
-        // Reset the toggle flag after first frame
-        if (this.justToggledFreeCamera) {
-            this.justToggledFreeCamera = false
-        }
         
         this.camera.modes.default.instance.position.copy(viewPosition);
         this.camera.modes.default.instance.lookAt(this.view.target.smoothed);
@@ -431,9 +366,6 @@ export default class Navigation
      * Advanced mouse move handler for PC zoom/pan system and laptop/TV screens
      */
     onMouseMoveAdvanced(event) {
-        // Don't process mouse move for zoom/pan in free camera mode
-        if (this.freeCameraMode) return;
-        
         const rect = this.targetElement.getBoundingClientRect();
         this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -515,9 +447,6 @@ export default class Navigation
      * Click handler: Advanced PC zoom system + laptop/TV zoom
      */
     onClick(event) {
-        // Don't process clicks in free camera mode
-        if (this.freeCameraMode) return;
-        
         // Don't process clicks until 2 seconds after START button
         if (!this.clickEnabled) return;
         
@@ -1161,70 +1090,6 @@ export default class Navigation
             overwrite: true,
             ease: 'power2.inOut'
         });
-    }
-
-    toggleFreeCamera()
-    {
-        this.freeCameraMode = !this.freeCameraMode
-        this.justToggledFreeCamera = true // Set flag to skip boundary clamping on next frame
-        
-        if (this.freeCameraButton) {
-            if (this.freeCameraMode) {
-                this.freeCameraButton.classList.add('active')
-                
-                // If we're in any zoom state, exit it first
-                if (this.pcZoomState !== 'none') {
-                    this.pcZoomState = 'none'
-                    this.pcScreenCenter = null
-                }
-                if (this.laptopZoomed) {
-                    this.laptopZoomed = false
-                    this.laptopZoomInComplete = false
-                }
-                if (this.tvZoomed) {
-                    this.tvZoomed = false
-                    this.tvZoomInComplete = false
-                }
-                
-                // Capture ACTUAL current camera position and calculate spherical from it
-                const currentPos = this.camera.modes.default.instance.position.clone()
-                const currentTarget = this.view.target.smoothed.clone()
-                
-                // Calculate spherical coordinates from actual position
-                const offset = currentPos.clone().sub(currentTarget)
-                const spherical = new THREE.Spherical().setFromVector3(offset)
-                
-                // Set both value and smoothed to current actual state
-                this.view.spherical.value.copy(spherical)
-                this.view.spherical.smoothed.copy(spherical)
-                this.view.target.value.copy(currentTarget)
-                this.view.target.smoothed.copy(currentTarget)
-                
-                console.log('Entering free camera at position:', currentPos)
-                console.log('Target:', currentTarget)
-                console.log('Spherical:', spherical)
-            } else {
-                this.freeCameraButton.classList.remove('active')
-                
-                // Capture ACTUAL current camera position and calculate spherical from it
-                const currentPos = this.camera.modes.default.instance.position.clone()
-                const currentTarget = this.view.target.smoothed.clone()
-                
-                // Calculate spherical coordinates from actual position
-                const offset = currentPos.clone().sub(currentTarget)
-                const spherical = new THREE.Spherical().setFromVector3(offset)
-                
-                // Set both value and smoothed to current actual state
-                this.view.spherical.value.copy(spherical)
-                this.view.spherical.smoothed.copy(spherical)
-                this.view.target.value.copy(currentTarget)
-                this.view.target.smoothed.copy(currentTarget)
-                
-                console.log('Exiting free camera at position:', currentPos)
-            }
-        }
-        
-        console.log('Free camera mode:', this.freeCameraMode ? 'ON' : 'OFF')
     }
 
     createDevPanel() {
