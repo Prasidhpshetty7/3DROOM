@@ -282,14 +282,15 @@ export default class World
 
     setScreens()
     {
-        this.pcScreen = new Screen(
-            this.resources.items.pcScreenModel.scene.children[0],
-            '/assets/videoPortfolio.mp4'
-        )
-        this.macScreen = new Screen(
-            this.resources.items.macScreenModel.scene.children[0],
-            '/assets/videoStream.mp4'
-        )
+        // Screens disabled - no videos on PC monitor or laptop
+        // this.pcScreen = new Screen(
+        //     this.resources.items.pcScreenModel.scene.children[0],
+        //     '/assets/videoPortfolio.mp4'
+        // )
+        // this.macScreen = new Screen(
+        //     this.resources.items.macScreenModel.scene.children[0],
+        //     '/assets/videoStream.mp4'
+        // )
     }
 
     /**
