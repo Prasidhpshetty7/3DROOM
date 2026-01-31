@@ -290,6 +290,8 @@ export default class World
         if (pcScreenMesh) {
             pcScreenMesh.material = blackMaterial
             this.scene.add(pcScreenMesh)
+            // Store reference for navigation
+            this.pcScreen = { model: { mesh: pcScreenMesh } }
         }
         
         // Laptop Screen - black
@@ -297,6 +299,8 @@ export default class World
         if (macScreenMesh) {
             macScreenMesh.material = blackMaterial
             this.scene.add(macScreenMesh)
+            // Store reference for navigation
+            this.macScreen = { model: { mesh: macScreenMesh } }
         }
     }
 
