@@ -40,6 +40,15 @@ export default class Navigation
         this.tvZoomed = false
         this.tvZoomInComplete = false
         
+        // Sofa zoom state
+        this.sofaZoomed = false
+        this.sofaZoomInComplete = false
+        this.sofaCenter = null
+        
+        // Laptop zoom state
+        this.laptopZoomed = false
+        this.laptopZoomInComplete = false
+        
         // Video button toggle - enables/disables free exploration mode
         this.freeExploreMode = false
         this.videoButton = document.getElementById('free-camera-toggle')
@@ -341,6 +350,13 @@ export default class Navigation
             }
             return;
         }
+        // If zoomed in on sofa, block all camera updates except lookAt (unless in free explore mode)
+        if (!this.freeExploreMode && this.sofaZoomed) {
+            if (this.sofaCenter) {
+                this.camera.modes.default.instance.lookAt(this.sofaCenter);
+            }
+            return;
+        }
         // If zoomed in on TV, block all camera updates except lookAt (unless in free explore mode)
         if (!this.freeExploreMode && this.tvZoomed) {
             const tvMesh = this.world.tvMesh;
@@ -482,14 +498,38 @@ export default class Navigation
             return;
         }
 
-        // Laptop logic
+        // Laptop logic - zoom out when mouse leaves
         if (this.laptopZoomed && this.laptopZoomInComplete) {
             const laptopScreen = this.world.macScreen?.model?.mesh;
             if (!laptopScreen) return;
             this.raycaster.setFromCamera(this.pointer, this.camera.instance);
             const laptopIntersects = this.raycaster.intersectObject(laptopScreen, true);
             if (laptopIntersects.length === 0) {
-                this.zoomOutBackwardsFromLaptop();
+                this.zoomOutFromLaptop();
+            }
+            return;
+        }
+
+        // Sofa logic - pan left/right and zoom out when mouse leaves
+        if (this.sofaZoomed && this.sofaZoomInComplete) {
+            const sofaMesh = this.world.topChair?.model?.group;
+            if (!sofaMesh) return;
+            this.raycaster.setFromCamera(this.pointer, this.camera.instance);
+            const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
+            
+            if (sofaIntersects.length === 0) {
+                // Mouse left sofa, zoom out
+                this.zoomOutFromSofa();
+            } else {
+                // Mouse on sofa, handle horizontal pan based on mouse X position
+                const mouseXNormalized = (event.clientX - rect.left) / rect.width; // 0 to 1
+                
+                // Pan left if mouse is on left side (< 0.3), pan right if on right side (> 0.7)
+                if (mouseXNormalized < 0.3) {
+                    this.panSofaCameraLeft();
+                } else if (mouseXNormalized > 0.7) {
+                    this.panSofaCameraRight();
+                }
             }
             return;
         }
@@ -508,7 +548,7 @@ export default class Navigation
     }
 
     /**
-     * Click handler: Advanced PC zoom system + laptop/TV zoom
+     * Click handler: Advanced PC zoom system + laptop/sofa zoom
      */
     onClick(event) {
         // Don't process clicks in free explore mode
@@ -522,49 +562,55 @@ export default class Navigation
         this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        // FIRST CLICK: Zoom to PC monitor at 75% (anywhere click)
-        if (this.isFirstClick && this.pcZoomState === 'none') {
-            this.isFirstClick = false;
+        // If in any zoomed state, check if clicking away to return
+        if (this.pcZoomState !== 'none' || this.laptopZoomed || this.sofaZoomed) {
+            // Check if clicking on the currently zoomed object
+            this.raycaster.setFromCamera(this.pointer, this.camera.instance);
             
-            // Dismiss the "Click anywhere" prompt
-            const clickPrompt = document.getElementById('click-prompt');
-            if (clickPrompt && clickPrompt.style.display !== 'none') {
-                clickPrompt.classList.add('fade-out');
-                setTimeout(() => {
-                    clickPrompt.style.display = 'none';
-                }, 500);
-                
-                // Start showing info panel
-                if (window.showInfoPanel) {
-                    window.showInfoPanel();
+            let clickedOnCurrentObject = false;
+            
+            // Check PC screen
+            if (this.pcZoomState !== 'none') {
+                const pcScreen = this.world.pcScreen?.model?.mesh;
+                if (pcScreen) {
+                    const pcIntersects = this.raycaster.intersectObject(pcScreen, true);
+                    if (pcIntersects.length > 0) {
+                        clickedOnCurrentObject = true;
+                    }
                 }
             }
             
-            // Zoom to PC
-            this.zoomToPCAt75Percent();
-            return;
-        }
-
-        // If in PC zoom states (75% or 35%), check if clicking away to return
-        if (this.pcZoomState === 'zoomed75' || this.pcZoomState === 'zoomed35') {
-            const pcScreen = this.world.pcScreen?.model?.mesh;
-            if (pcScreen) {
-                this.raycaster.setFromCamera(this.pointer, this.camera.instance);
-                const pcIntersects = this.raycaster.intersectObject(pcScreen, true);
-                
-                // If clicking on monitor, stay in current state
-                if (pcIntersects.length > 0) {
-                    return;
+            // Check laptop screen
+            if (this.laptopZoomed) {
+                const laptopScreen = this.world.macScreen?.model?.mesh;
+                if (laptopScreen) {
+                    const laptopIntersects = this.raycaster.intersectObject(laptopScreen, true);
+                    if (laptopIntersects.length > 0) {
+                        clickedOnCurrentObject = true;
+                    }
                 }
-                
-                // If clicking anywhere else, return to original position
-                this.returnToOriginalPosition();
+            }
+            
+            // Check sofa
+            if (this.sofaZoomed) {
+                const sofaMesh = this.world.topChair?.model?.group;
+                if (sofaMesh) {
+                    const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
+                    if (sofaIntersects.length > 0) {
+                        clickedOnCurrentObject = true;
+                    }
+                }
+            }
+            
+            // If clicking on current object, stay in current state
+            if (clickedOnCurrentObject) {
                 return;
             }
+            
+            // If clicking anywhere else, return to original position
+            this.returnToOriginalPosition();
+            return;
         }
-
-        // If already zoomed in on laptop or TV, ignore clicks
-        if (this.laptopZoomed || this.tvZoomed) return;
 
         // Check laptop screen for zoom
         const laptopScreen = this.world.macScreen?.model?.mesh;
@@ -572,19 +618,64 @@ export default class Navigation
             this.raycaster.setFromCamera(this.pointer, this.camera.instance);
             const laptopIntersects = this.raycaster.intersectObject(laptopScreen, true);
             if (laptopIntersects.length > 0) {
-                this.zoomInOnLaptop();
+                this.zoomToLaptop();
+                
+                // Dismiss the "Click anywhere" prompt
+                const clickPrompt = document.getElementById('click-prompt');
+                if (clickPrompt && clickPrompt.style.display !== 'none') {
+                    clickPrompt.classList.add('fade-out');
+                    setTimeout(() => {
+                        clickPrompt.style.display = 'none';
+                    }, 500);
+                    
+                    // Start showing info panel
+                    if (window.showInfoPanel) {
+                        window.showInfoPanel();
+                    }
+                }
                 return;
             }
         }
 
-        // Check TV for zoom
-        const tvMesh = this.world.tvMesh;
-        if (tvMesh) {
+        // Check sofa for zoom
+        const sofaMesh = this.world.topChair?.model?.group;
+        if (sofaMesh) {
             this.raycaster.setFromCamera(this.pointer, this.camera.instance);
-            const tvIntersects = this.raycaster.intersectObject(tvMesh, true);
-            if (tvIntersects.length > 0) {
-                this.zoomInOnTV();
+            const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
+            if (sofaIntersects.length > 0) {
+                this.zoomToSofa();
+                
+                // Dismiss the "Click anywhere" prompt
+                const clickPrompt = document.getElementById('click-prompt');
+                if (clickPrompt && clickPrompt.style.display !== 'none') {
+                    clickPrompt.classList.add('fade-out');
+                    setTimeout(() => {
+                        clickPrompt.style.display = 'none';
+                    }, 500);
+                    
+                    // Start showing info panel
+                    if (window.showInfoPanel) {
+                        window.showInfoPanel();
+                    }
+                }
                 return;
+            }
+        }
+
+        // Default: Click anywhere else zooms to PC monitor
+        this.zoomToPCAt75Percent();
+        
+        // Dismiss the "Click anywhere" prompt
+        const clickPrompt = document.getElementById('click-prompt');
+        if (clickPrompt && clickPrompt.style.display !== 'none') {
+            clickPrompt.classList.add('fade-out');
+            setTimeout(() => {
+                clickPrompt.style.display = 'none';
+            }, 500);
+            
+            // Start showing info panel
+            if (window.showInfoPanel) {
+                window.showInfoPanel();
             }
         }
     }
@@ -908,8 +999,16 @@ export default class Navigation
     returnToOriginalPosition() {
         if (!this.defaultCameraState) return;
         
-        // IMMEDIATELY set state to returning to block update() interference
+        // IMMEDIATELY set states to returning to block update() interference
+        const wasPC = this.pcZoomState !== 'none';
+        const wasLaptop = this.laptopZoomed;
+        const wasSofa = this.sofaZoomed;
+        
         this.pcZoomState = 'returning';
+        this.laptopZoomed = false;
+        this.laptopZoomInComplete = false;
+        this.sofaZoomed = false;
+        this.sofaZoomInComplete = false;
 
         // Kill any ongoing animations FIRST
         gsap.killTweensOf(this.camera.modes.default.instance.position);
@@ -959,7 +1058,7 @@ export default class Navigation
                 
                 this.pcZoomState = 'none';
                 this.pcScreenCenter = null;
-                this.isFirstClick = true; // Allow first click again
+                this.sofaCenter = null;
                 
                 console.log('Return animation complete');
             }
@@ -1156,6 +1255,198 @@ export default class Navigation
             duration: 1.2,
             overwrite: true,
             ease: 'power2.inOut'
+        });
+    }
+
+    // New zoom functions for laptop and sofa
+    zoomToLaptop() {
+        if (this.laptopZoomed) return;
+        
+        // Save original camera state
+        if (!this.defaultCameraState) {
+            this.defaultCameraState = {
+                position: this.camera.modes.default.instance.position.clone(),
+                spherical: {
+                    radius: this.view.spherical.value.radius,
+                    phi: this.view.spherical.value.phi,
+                    theta: this.view.spherical.value.theta
+                },
+                target: this.view.target.value.clone()
+            };
+        }
+        
+        this.laptopZoomed = true;
+        this.laptopZoomInComplete = false;
+        
+        const laptopScreen = this.world.macScreen?.model?.mesh;
+        if (!laptopScreen) return;
+        
+        const box = new THREE.Box3().setFromObject(laptopScreen);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        const size = box.getSize(new THREE.Vector3());
+        
+        // Calculate distance for smooth zoom (like PC monitor)
+        const screenMax = Math.max(size.x, size.y);
+        const fov = this.camera.instance.fov * Math.PI / 180;
+        const distance = (screenMax / (2 * Math.tan(fov / 2))) * 0.65;
+        
+        // Position camera in front of laptop screen
+        const camPos = center.clone().add(new THREE.Vector3(-0.2, 0.3, distance));
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: camPos.x,
+            y: camPos.y,
+            z: camPos.z,
+            duration: 1.5,
+            overwrite: true,
+            ease: 'power2.inOut',
+            onUpdate: () => {
+                this.camera.modes.default.instance.lookAt(center);
+            },
+            onComplete: () => {
+                this.laptopZoomInComplete = true;
+            }
+        });
+    }
+    
+    zoomOutFromLaptop() {
+        if (!this.laptopZoomed || !this.laptopZoomInComplete) return;
+        this.laptopZoomed = false;
+        this.laptopZoomInComplete = false;
+        
+        const laptopScreen = this.world.macScreen?.model?.mesh;
+        if (!laptopScreen) return;
+        
+        const box = new THREE.Box3().setFromObject(laptopScreen);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        
+        // Zoom out smoothly
+        const currentPos = this.camera.modes.default.instance.position.clone();
+        const direction = currentPos.clone().sub(center).normalize();
+        const newPos = currentPos.clone().add(direction.multiplyScalar(3.0));
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: newPos.x,
+            y: newPos.y,
+            z: newPos.z,
+            duration: 1.2,
+            overwrite: true,
+            ease: 'power2.inOut',
+            onUpdate: () => {
+                this.camera.modes.default.instance.lookAt(center);
+            }
+        });
+    }
+    
+    zoomToSofa() {
+        if (this.sofaZoomed) return;
+        
+        // Save original camera state
+        if (!this.defaultCameraState) {
+            this.defaultCameraState = {
+                position: this.camera.modes.default.instance.position.clone(),
+                spherical: {
+                    radius: this.view.spherical.value.radius,
+                    phi: this.view.spherical.value.phi,
+                    theta: this.view.spherical.value.theta
+                },
+                target: this.view.target.value.clone()
+            };
+        }
+        
+        this.sofaZoomed = true;
+        this.sofaZoomInComplete = false;
+        
+        const sofaMesh = this.world.topChair?.model?.group;
+        if (!sofaMesh) return;
+        
+        const box = new THREE.Box3().setFromObject(sofaMesh);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        this.sofaCenter = center;
+        
+        // Camera position from your screenshot: looking at sofa from front-right
+        // Position: approximately (1.5, 2.8, 1.5) looking at sofa center
+        const camPos = new THREE.Vector3(1.5, 2.8, 1.5);
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: camPos.x,
+            y: camPos.y,
+            z: camPos.z,
+            duration: 1.5,
+            overwrite: true,
+            ease: 'power2.inOut',
+            onUpdate: () => {
+                this.camera.modes.default.instance.lookAt(center);
+            },
+            onComplete: () => {
+                this.sofaZoomInComplete = true;
+            }
+        });
+    }
+    
+    zoomOutFromSofa() {
+        if (!this.sofaZoomed || !this.sofaZoomInComplete) return;
+        this.sofaZoomed = false;
+        this.sofaZoomInComplete = false;
+        
+        if (!this.sofaCenter) return;
+        
+        // Zoom out smoothly
+        const currentPos = this.camera.modes.default.instance.position.clone();
+        const direction = currentPos.clone().sub(this.sofaCenter).normalize();
+        const newPos = currentPos.clone().add(direction.multiplyScalar(3.0));
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: newPos.x,
+            y: newPos.y,
+            z: newPos.z,
+            duration: 1.2,
+            overwrite: true,
+            ease: 'power2.inOut',
+            onUpdate: () => {
+                this.camera.modes.default.instance.lookAt(this.sofaCenter);
+            }
+        });
+    }
+    
+    panSofaCameraLeft() {
+        if (!this.sofaZoomed) return;
+        
+        const currentPos = this.camera.modes.default.instance.position;
+        const targetX = currentPos.x - 0.02;
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: targetX,
+            duration: 0.3,
+            overwrite: 'auto',
+            ease: 'power1.out',
+            onUpdate: () => {
+                if (this.sofaCenter) {
+                    this.camera.modes.default.instance.lookAt(this.sofaCenter);
+                }
+            }
+        });
+    }
+    
+    panSofaCameraRight() {
+        if (!this.sofaZoomed) return;
+        
+        const currentPos = this.camera.modes.default.instance.position;
+        const targetX = currentPos.x + 0.02;
+        
+        gsap.to(this.camera.modes.default.instance.position, {
+            x: targetX,
+            duration: 0.3,
+            overwrite: 'auto',
+            ease: 'power1.out',
+            onUpdate: () => {
+                if (this.sofaCenter) {
+                    this.camera.modes.default.instance.lookAt(this.sofaCenter);
+                }
+            }
         });
     }
 
