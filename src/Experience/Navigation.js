@@ -527,7 +527,7 @@ export default class Navigation
 
         // Sofa logic - pan left/right and zoom out when mouse leaves
         if (this.sofaZoomed && this.sofaZoomInComplete) {
-            const sofaMesh = this.world.topChair?.model?.group;
+            const sofaMesh = this.world.sofaTableMesh;
             if (!sofaMesh) return;
             this.raycaster.setFromCamera(this.pointer, this.camera.instance);
             const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
@@ -608,7 +608,7 @@ export default class Navigation
             
             // Check sofa
             if (this.sofaZoomed) {
-                const sofaMesh = this.world.topChair?.model?.group;
+                const sofaMesh = this.world.sofaTableMesh;
                 if (sofaMesh) {
                     const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
                     if (sofaIntersects.length > 0) {
@@ -653,7 +653,7 @@ export default class Navigation
         }
 
         // Check sofa for zoom
-        const sofaMesh = this.world.topChair?.model?.group;
+        const sofaMesh = this.world.sofaTableMesh;
         if (sofaMesh) {
             this.raycaster.setFromCamera(this.pointer, this.camera.instance);
             const sofaIntersects = this.raycaster.intersectObject(sofaMesh, true);
@@ -1374,7 +1374,7 @@ export default class Navigation
         this.sofaZoomed = true;
         this.sofaZoomInComplete = false;
         
-        const sofaMesh = this.world.topChair?.model?.group;
+        const sofaMesh = this.world.sofaTableMesh;
         if (!sofaMesh) return;
         
         const box = new THREE.Box3().setFromObject(sofaMesh);
