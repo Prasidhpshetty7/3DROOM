@@ -202,10 +202,12 @@ export default class Navigation
         this.view.drag.previous.x = 0
         this.view.drag.previous.y = 0
         this.view.drag.sensitivity = 2
+        this.view.drag.freeExploreSensitivity = 8 // Higher sensitivity for free explore mode
         this.view.drag.alternative = false
 
         this.view.zoom = {}
         this.view.zoom.sensitivity = 0.01
+        this.view.zoom.freeExploreSensitivity = 0.08 // Much faster zoom for free explore
         this.view.zoom.delta = 0
 
         /**
@@ -371,11 +373,22 @@ export default class Navigation
         /**
          * View - ONLY runs when not in any zoom state
          */
+        // Use different sensitivity and smoothing for free explore mode
+        const currentDragSensitivity = this.freeExploreMode ? this.view.drag.freeExploreSensitivity : this.view.drag.sensitivity
+        const currentZoomSensitivity = this.freeExploreMode ? this.view.zoom.freeExploreSensitivity : this.view.zoom.sensitivity
+        const currentSmoothing = this.freeExploreMode ? 0.002 : this.view.spherical.smoothing // 2.5x faster smoothing
+        const currentTargetSmoothing = this.freeExploreMode ? 0.002 : this.view.target.smoothing
+        
         // Zoom
-        this.view.spherical.value.radius += this.view.zoom.delta * this.view.zoom.sensitivity
+        this.view.spherical.value.radius += this.view.zoom.delta * currentZoomSensitivity
 
-        // Apply limits
-        this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
+        // Apply limits - more relaxed in free explore mode
+        if (this.freeExploreMode) {
+            // Allow wider zoom range in free explore mode
+            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, 5), 60)
+        } else {
+            this.view.spherical.value.radius = Math.min(Math.max(this.view.spherical.value.radius, this.view.spherical.limits.radius.min), this.view.spherical.limits.radius.max)
+        }
 
         // Drag
         if(this.view.drag.alternative)
@@ -399,26 +412,28 @@ export default class Navigation
         }
         else
         {
-            this.view.spherical.value.theta -= this.view.drag.delta.x * this.view.drag.sensitivity / this.config.smallestSide
-            this.view.spherical.value.phi -= this.view.drag.delta.y * this.view.drag.sensitivity / this.config.smallestSide    
+            this.view.spherical.value.theta -= this.view.drag.delta.x * currentDragSensitivity / this.config.smallestSide
+            this.view.spherical.value.phi -= this.view.drag.delta.y * currentDragSensitivity / this.config.smallestSide    
         
-            // Apply limits
-            this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
-            this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
+            // Apply limits - skip in free explore mode for unlimited rotation
+            if (!this.freeExploreMode) {
+                this.view.spherical.value.theta = Math.min(Math.max(this.view.spherical.value.theta, this.view.spherical.limits.theta.min), this.view.spherical.limits.theta.max)
+                this.view.spherical.value.phi = Math.min(Math.max(this.view.spherical.value.phi, this.view.spherical.limits.phi.min), this.view.spherical.limits.phi.max)
+            }
         }
 
         this.view.drag.delta.x = 0
         this.view.drag.delta.y = 0
         this.view.zoom.delta = 0
 
-        // Smoothing
-        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * this.view.spherical.smoothing * this.time.delta
-        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * this.view.spherical.smoothing * this.time.delta
-        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * this.view.spherical.smoothing * this.time.delta
+        // Smoothing - faster in free explore mode
+        this.view.spherical.smoothed.radius += (this.view.spherical.value.radius - this.view.spherical.smoothed.radius) * currentSmoothing * this.time.delta
+        this.view.spherical.smoothed.phi += (this.view.spherical.value.phi - this.view.spherical.smoothed.phi) * currentSmoothing * this.time.delta
+        this.view.spherical.smoothed.theta += (this.view.spherical.value.theta - this.view.spherical.smoothed.theta) * currentSmoothing * this.time.delta
 
-        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * this.view.target.smoothing * this.time.delta
-        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * this.view.target.smoothing * this.time.delta
-        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * this.view.target.smoothing * this.time.delta
+        this.view.target.smoothed.x += (this.view.target.value.x - this.view.target.smoothed.x) * currentTargetSmoothing * this.time.delta
+        this.view.target.smoothed.y += (this.view.target.value.y - this.view.target.smoothed.y) * currentTargetSmoothing * this.time.delta
+        this.view.target.smoothed.z += (this.view.target.value.z - this.view.target.smoothed.z) * currentTargetSmoothing * this.time.delta
 
         // Restore original camera update logic
         const viewPosition = new THREE.Vector3();
