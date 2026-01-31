@@ -282,15 +282,22 @@ export default class World
 
     setScreens()
     {
-        // Screens disabled - no videos on PC monitor or laptop
-        // this.pcScreen = new Screen(
-        //     this.resources.items.pcScreenModel.scene.children[0],
-        //     '/assets/videoPortfolio.mp4'
-        // )
-        // this.macScreen = new Screen(
-        //     this.resources.items.macScreenModel.scene.children[0],
-        //     '/assets/videoStream.mp4'
-        // )
+        // Add black screens instead of videos
+        const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
+        
+        // PC Screen - black
+        const pcScreenMesh = this.resources.items.pcScreenModel.scene.children[0]
+        if (pcScreenMesh) {
+            pcScreenMesh.material = blackMaterial
+            this.scene.add(pcScreenMesh)
+        }
+        
+        // Laptop Screen - black
+        const macScreenMesh = this.resources.items.macScreenModel.scene.children[0]
+        if (macScreenMesh) {
+            macScreenMesh.material = blackMaterial
+            this.scene.add(macScreenMesh)
+        }
     }
 
     /**
