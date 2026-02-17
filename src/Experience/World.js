@@ -282,19 +282,17 @@ export default class World
 
     setScreens()
     {
-        // Add black screens instead of videos
-        const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
-        
-        // PC Screen - black
+        // PC Screen - show website os.prasidhshetty.in
         const pcScreenMesh = this.resources.items.pcScreenModel.scene.children[0]
         if (pcScreenMesh) {
-            pcScreenMesh.material = blackMaterial
-            this.scene.add(pcScreenMesh)
-            // Store reference for navigation
-            this.pcScreen = { model: { mesh: pcScreenMesh } }
+            this.pcScreen = new Screen(
+                pcScreenMesh,
+                'https://os.prasidhshetty.in'
+            )
         }
         
         // Laptop Screen - black
+        const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
         const macScreenMesh = this.resources.items.macScreenModel.scene.children[0]
         if (macScreenMesh) {
             macScreenMesh.material = blackMaterial
