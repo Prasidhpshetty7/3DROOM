@@ -97,6 +97,7 @@ export default class Screen
         
         const camera = this.experience.camera.instance;
         const canvas = this.experience.renderer.instance.domElement;
+        const canvasRect = canvas.getBoundingClientRect();
         
         const geometry = mesh.geometry;
         if (!geometry) return;
@@ -126,9 +127,9 @@ export default class Screen
         const width = maxX - minX;
         const height = maxY - minY;
         
-        // Always update position
-        this.model.element.style.left = minX + 'px';
-        this.model.element.style.top = minY + 'px';
+        // Position relative to canvas position on page
+        this.model.element.style.left = (canvasRect.left + minX) + 'px';
+        this.model.element.style.top = (canvasRect.top + minY) + 'px';
         this.model.element.style.width = width + 'px';
         this.model.element.style.height = height + 'px';
         
