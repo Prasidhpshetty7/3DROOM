@@ -320,6 +320,9 @@ export default class World
 
     update()
     {
+        if(this.pcScreen)
+            this.pcScreen.update()
+            
         if(this.googleLeds)
             this.googleLeds.update()
 
