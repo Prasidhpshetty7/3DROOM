@@ -36,10 +36,14 @@ export default class Screen
             this.model.element.style.top = '0'
             this.model.element.style.left = '0'
             this.model.element.style.pointerEvents = 'none'
-            this.model.element.style.visibility = 'hidden'
+            this.model.element.style.visibility = 'visible'
             this.model.element.style.zIndex = '10'
             this.model.element.style.transformOrigin = 'top left'
+            this.model.element.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+            this.model.element.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms'
             document.body.appendChild(this.model.element)
+            
+            console.log('Iframe created for:', this.sourcePath)
 
             // Create canvas for rendering
             const canvas = document.createElement('canvas')
@@ -122,12 +126,14 @@ export default class Screen
         const width = maxX - minX;
         const height = maxY - minY;
         
-        // Only show iframe if it's visible on screen
+        // Always update position
+        this.model.element.style.left = minX + 'px';
+        this.model.element.style.top = minY + 'px';
+        this.model.element.style.width = width + 'px';
+        this.model.element.style.height = height + 'px';
+        
+        // Show/hide based on size
         if (width > 10 && height > 10) {
-            this.model.element.style.left = minX + 'px';
-            this.model.element.style.top = minY + 'px';
-            this.model.element.style.width = width + 'px';
-            this.model.element.style.height = height + 'px';
             this.model.element.style.visibility = 'visible';
         } else {
             this.model.element.style.visibility = 'hidden';
