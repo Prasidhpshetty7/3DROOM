@@ -35,9 +35,10 @@ export default class Screen
             this.model.element.style.position = 'absolute'
             this.model.element.style.top = '0'
             this.model.element.style.left = '0'
-            this.model.element.style.pointerEvents = 'auto'
-            this.model.element.style.visibility = 'visible'
-            this.model.element.style.zIndex = '1'
+            this.model.element.style.pointerEvents = 'none'
+            this.model.element.style.visibility = 'hidden'
+            this.model.element.style.zIndex = '10'
+            this.model.element.style.transformOrigin = 'top left'
             document.body.appendChild(this.model.element)
 
             // Create canvas for rendering
@@ -45,7 +46,7 @@ export default class Screen
             canvas.width = 1920
             canvas.height = 1080
             const ctx = canvas.getContext('2d')
-            ctx.fillStyle = '#000'
+            ctx.fillStyle = '#1a1a1a'
             ctx.fillRect(0, 0, 1920, 1080)
 
             // Create texture from canvas
@@ -55,7 +56,6 @@ export default class Screen
             this.model.ctx = ctx
             
             this.isWebsite = true
-            this.updateIframePosition()
         } else {
             // Original video element
             this.model.element = document.createElement('video')
@@ -122,10 +122,16 @@ export default class Screen
         const width = maxX - minX;
         const height = maxY - minY;
         
-        this.model.element.style.left = minX + 'px';
-        this.model.element.style.top = minY + 'px';
-        this.model.element.style.width = width + 'px';
-        this.model.element.style.height = height + 'px';
+        // Only show iframe if it's visible on screen
+        if (width > 10 && height > 10) {
+            this.model.element.style.left = minX + 'px';
+            this.model.element.style.top = minY + 'px';
+            this.model.element.style.width = width + 'px';
+            this.model.element.style.height = height + 'px';
+            this.model.element.style.visibility = 'visible';
+        } else {
+            this.model.element.style.visibility = 'hidden';
+        }
     }
 
     update()
