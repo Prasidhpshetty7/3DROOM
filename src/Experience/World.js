@@ -282,38 +282,19 @@ export default class World
 
     setScreens()
     {
-        // PC Screen - simple colored texture for testing
+        // Add black screens
+        const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
+        
+        // PC Screen - black
         const pcScreenMesh = this.resources.items.pcScreenModel.scene.children[0]
         if (pcScreenMesh) {
-            // Create a simple canvas with your website URL text
-            const canvas = document.createElement('canvas')
-            canvas.width = 1920
-            canvas.height = 1080
-            const ctx = canvas.getContext('2d')
-            
-            // Fill with a color
-            ctx.fillStyle = '#1a1a2e'
-            ctx.fillRect(0, 0, 1920, 1080)
-            
-            // Add text
-            ctx.fillStyle = '#ffffff'
-            ctx.font = 'bold 80px Arial'
-            ctx.textAlign = 'center'
-            ctx.fillText('os.prasidhshetty.in', 960, 540)
-            
-            // Create texture from canvas
-            const texture = new THREE.CanvasTexture(canvas)
-            const material = new THREE.MeshBasicMaterial({ map: texture })
-            
-            pcScreenMesh.material = material
+            pcScreenMesh.material = blackMaterial
             this.scene.add(pcScreenMesh)
+            // Store reference for navigation
             this.pcScreen = { model: { mesh: pcScreenMesh } }
-            
-            console.log('PC Screen created with canvas texture')
         }
         
         // Laptop Screen - black
-        const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
         const macScreenMesh = this.resources.items.macScreenModel.scene.children[0]
         if (macScreenMesh) {
             macScreenMesh.material = blackMaterial
@@ -341,9 +322,6 @@ export default class World
 
     update()
     {
-        if(this.pcScreen)
-            this.pcScreen.update()
-            
         if(this.googleLeds)
             this.googleLeds.update()
 
