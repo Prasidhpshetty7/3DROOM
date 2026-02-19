@@ -294,13 +294,13 @@ export default class World
             this.pcScreen = { model: { mesh: pcScreenMesh } }
         }
         
-        // Laptop Screen - black
+        // Laptop Screen - YouTube video embedded
         const macScreenMesh = this.resources.items.macScreenModel.scene.children[0]
         if (macScreenMesh) {
-            macScreenMesh.material = blackMaterial
-            this.scene.add(macScreenMesh)
-            // Store reference for navigation
-            this.macScreen = { model: { mesh: macScreenMesh } }
+            this.macScreen = new Screen(
+                macScreenMesh,
+                'https://www.youtube.com/embed/LbLLWmmL3YE?start=0&end=1010&autoplay=1&mute=1&loop=1&playlist=LbLLWmmL3YE'
+            )
         }
     }
 
