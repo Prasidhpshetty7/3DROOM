@@ -282,13 +282,34 @@ export default class World
 
     setScreens()
     {
-        // PC Screen - show website os.prasidhshetty.in
+        // PC Screen - simple colored texture for testing
         const pcScreenMesh = this.resources.items.pcScreenModel.scene.children[0]
         if (pcScreenMesh) {
-            this.pcScreen = new Screen(
-                pcScreenMesh,
-                'https://os.prasidhshetty.in'
-            )
+            // Create a simple canvas with your website URL text
+            const canvas = document.createElement('canvas')
+            canvas.width = 1920
+            canvas.height = 1080
+            const ctx = canvas.getContext('2d')
+            
+            // Fill with a color
+            ctx.fillStyle = '#1a1a2e'
+            ctx.fillRect(0, 0, 1920, 1080)
+            
+            // Add text
+            ctx.fillStyle = '#ffffff'
+            ctx.font = 'bold 80px Arial'
+            ctx.textAlign = 'center'
+            ctx.fillText('os.prasidhshetty.in', 960, 540)
+            
+            // Create texture from canvas
+            const texture = new THREE.CanvasTexture(canvas)
+            const material = new THREE.MeshBasicMaterial({ map: texture })
+            
+            pcScreenMesh.material = material
+            this.scene.add(pcScreenMesh)
+            this.pcScreen = { model: { mesh: pcScreenMesh } }
+            
+            console.log('PC Screen created with canvas texture')
         }
         
         // Laptop Screen - black
